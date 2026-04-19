@@ -8,12 +8,11 @@
     <link rel="apple-touch-icon" href="icon.png">
     <meta name="theme-color" content="#00c853">
     
-    <title>Step Energy Monitor - Professional Edition</title>
+    <title>Step Energy Monitor - Bluetooth Edition</title>
     
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            /* استبدلت الاسم الطويل بـ bg.png لضمان ظهور الصورة */
             background: url('bg.png') no-repeat center center fixed; 
             background-size: cover;
             color: white;
@@ -34,7 +33,6 @@
             z-index: -1;
         }
 
-        /* نقلت الـ Style هنا بدل الـ Inline عشان نشيل الخط الأحمر */
         h1 { 
             text-align: center; 
             margin-top: 20px; 
@@ -61,7 +59,6 @@
 
         .card {
             background: rgba(255, 255, 255, 0.1);
-            /* إضافة الـ webkit عشان دعم متصفح Safari */
             -webkit-backdrop-filter: blur(10px);
             backdrop-filter: blur(10px); 
             border-left: 5px solid #00c853;
@@ -141,7 +138,7 @@
 </head>
 <body>
 
-    <button class="btn-connect" onclick="connectSerial()">Connect Device</button>
+    <button class="btn-connect" onclick="connectBluetooth()">Connect via Bluetooth</button>
     <h1>STEP ENERGY MONITOR</h1>
 
     <div class="main-layout">
@@ -166,20 +163,37 @@
             navigator.serviceWorker.register('sw.js').catch(err => console.log(err));
         }
 
-        let port, reader;
-        async function connectSerial() {
+        let bluetoothDevice;
+        let characteristic;
+
+        async function connectBluetooth() {
+            // المعرفات الافتراضية لقطع البلوتوث HC-05 / HC-06
+            const serviceUuid = 0xFFE0; 
+            const charUuid = 0xFFE1;
+
             try {
-                port = await navigator.serial.requestPort();
-                await port.open({ baudRate: 9600 });
-                const decoder = new TextDecoderStream();
-                port.readable.pipeTo(decoder.writable);
-                reader = decoder.readable.getReader();
-                while (true) {
-                    const { value, done } = await reader.read();
-                    if (done) break;
-                    if (value) parseData(value);
-                }
-            } catch (err) { alert("Connect Error: " + err); }
+                bluetoothDevice = await navigator.bluetooth.requestDevice({
+                    filters: [{ services: [serviceUuid] }]
+                });
+
+                const server = await bluetoothDevice.gatt.connect();
+                const service = await server.getPrimaryService(serviceUuid);
+                characteristic = await service.getCharacteristic(charUuid);
+
+                await characteristic.startNotifications();
+                
+                // استقبال البيانات لحظياً
+                characteristic.addEventListener('characteristicvaluechanged', (event) => {
+                    let decoder = new TextDecoder('utf-8');
+                    let data = decoder.decode(event.target.value);
+                    parseData(data);
+                });
+
+                alert("Connected Successfully! ✅");
+            } catch (err) {
+                console.log(err);
+                alert("Bluetooth Error: " + err);
+            }
         }
 
         function parseData(data) {
