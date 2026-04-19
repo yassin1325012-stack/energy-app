@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon.png">
+    <meta name="theme-color" content="#00c853">
+    
+    <title>Step Energy Monitor - Professional Edition</title>
+    
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            /* استبدلت الاسم الطويل بـ bg.png لضمان ظهور الصورة */
+            background: url('bg.png') no-repeat center center fixed; 
+            background-size: cover;
+            color: white;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        body::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.4); 
+            z-index: -1;
+        }
+
+        /* نقلت الـ Style هنا بدل الـ Inline عشان نشيل الخط الأحمر */
+        h1 { 
+            text-align: center; 
+            margin-top: 20px; 
+            letter-spacing: 5px; 
+            text-shadow: 2px 2px 10px rgba(0,200,83,0.5);
+            font-size: 1.8rem;
+        }
+
+        .main-layout {
+            display: flex;
+            flex: 1;
+            padding: 20px;
+            align-items: flex-start; 
+            justify-content: center;
+        }
+
+        .results-side {
+            display: flex;
+            flex-direction: column; 
+            gap: 15px;
+            width: 100%;
+            max-width: 350px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.1);
+            /* إضافة الـ webkit عشان دعم متصفح Safari */
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px); 
+            border-left: 5px solid #00c853;
+            border-radius: 10px;
+            padding: 15px;
+            position: relative;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .card h4 { margin: 0; font-size: 14px; text-transform: uppercase; color: #00c853; }
+        .value { font-size: 24px; font-weight: bold; margin: 5px 0; }
+        .unit { font-size: 12px; opacity: 0.7; }
+
+        .card::after {
+            position: absolute;
+            top: 50%; right: 10%;
+            transform: translateY(-50%);
+            font-size: 40px;
+            opacity: 0.15;
+            z-index: 0;
+        }
+        .steps::after { content: '👣'; }
+        .voltage::after { content: '⚡'; }
+        .current::after { content: '🔋'; }
+        .power::after { content: '💡'; }
+        .energy::after { content: '🔥'; }
+
+        .team-corner {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 15px;
+            margin-top: auto;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+
+        @media (min-width: 900px) {
+            .team-corner {
+                position: absolute;
+                bottom: 20px; right: 20px;
+                border-radius: 20px;
+                border: 1px solid rgba(255,255,255,0.2);
+            }
+            .results-side { margin-left: 40px; align-self: center; }
+            .main-layout { justify-content: flex-start; }
+        }
+
+        .member { width: 80px; text-align: center; }
+        .member img { 
+            width: 50px; height: 50px; 
+            border-radius: 50%; 
+            border: 2px solid #00c853; 
+            object-fit: cover;
+        }
+        .member p { font-size: 10px; margin-top: 5px; }
+
+        .btn-connect {
+            display: block;
+            margin: 10px auto;
+            background: #00c853;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(0,200,83,0.4);
+        }
+        
+        @media (min-width: 900px) {
+            .btn-connect { position: absolute; top: 20px; right: 20px; margin: 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <button class="btn-connect" onclick="connectSerial()">Connect Device</button>
+    <h1>STEP ENERGY MONITOR</h1>
+
+    <div class="main-layout">
+        <div class="results-side">
+            <div class="card steps"><h4>Steps</h4><div class="value" id="steps">0</div></div>
+            <div class="card voltage"><h4>Voltage</h4><div class="value" id="voltage">0</div><div class="unit">Volts (V)</div></div>
+            <div class="card current"><h4>Current</h4><div class="value" id="current">0</div><div class="unit">milliAmps (mA)</div></div>
+            <div class="card power"><h4>Power / Sec</h4><div class="value" id="power">0</div><div class="unit">Watts (W)</div></div>
+            <div class="card energy"><h4>Energy (5 min)</h4><div class="value" id="energy">0</div><div class="unit">Joules (J)</div></div>
+        </div>
+    </div>
+
+    <div class="team-corner">
+        <div class="member"><img src="team1.png" alt="Yassin"><p>Yassin</p></div>
+        <div class="member"><img src="team2.png" alt="Belal"><p>Belal</p></div>
+        <div class="member"><img src="team3.png" alt="Mohannad"><p>Mohannad</p></div>
+        <div class="member"><img src="team4.png" alt="Youssef"><p>Youssef</p></div>
+    </div>
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').catch(err => console.log(err));
+        }
+
+        let port, reader;
+        async function connectSerial() {
+            try {
+                port = await navigator.serial.requestPort();
+                await port.open({ baudRate: 9600 });
+                const decoder = new TextDecoderStream();
+                port.readable.pipeTo(decoder.writable);
+                reader = decoder.readable.getReader();
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+                    if (value) parseData(value);
+                }
+            } catch (err) { alert("Connect Error: " + err); }
+        }
+
+        function parseData(data) {
+            let text = data.trim();
+            if (!text.includes("|")) return;
+            let parts = text.split("|");
+            if (parts.length >= 3) {
+                let v = parseFloat(parts[1].split(":")[1]) || 0;
+                let c = parseFloat(parts[2].split(":")[1]) || 0;
+                let p = (v * (c / 1000)).toFixed(4);
+                
+                document.getElementById("steps").innerText = parts[0].split(":")[1];
+                document.getElementById("voltage").innerText = v;
+                document.getElementById("current").innerText = c;
+                document.getElementById("power").innerText = p;
+                document.getElementById("energy").innerText = (p * 300).toFixed(2);
+            }
+        }
+    </script>
+</body>
+</html>
