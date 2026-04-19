@@ -162,20 +162,17 @@
     let bluetoothDevice;
     let characteristic;
 
-  async function connectBluetooth() {
+ async function connectBluetooth() {
+    const SERIAL_UUID = "00001101-0000-1000-8000-00805f9b34fb"; // المعرف العالمي للـ Serial Port
+
     try {
-        // بنطلب الجهاز بدون فلاتر عشان ميبقاش فيه حجة للموبايل
         const device = await navigator.bluetooth.requestDevice({
-            acceptAllDevices: true,
-            optionalServices: ['00001101-0000-1000-8000-00805f9b34fb', 0xFFE0]
+            filters: [{ namePrefix: 'HC' }], // هيدور على أي حاجة بتبدأ بـ HC زي HC-05
+            optionalServices: [SERIAL_UUID]
         });
 
         const server = await device.gatt.connect();
-        
-        // محاولة إيجاد أي خدمة متاحة
-        const services = await server.getPrimaryServices();
-        const service = services[0]; 
-        
+        const service = await server.getPrimaryService(SERIAL_UUID);
         const characteristics = await service.getCharacteristics();
         characteristic = characteristics[0];
 
@@ -185,10 +182,10 @@
             parseData(data);
         });
 
-        alert("تم الاتصال! ✅ جرب تمشي دلوقتي");
+        alert("Connected via Web Bluetooth! ✅");
     } catch (err) {
         console.error(err);
-        alert("فشل: " + err.message);
+        alert("Connection Failed: " + err.message);
     }
 }
 
