@@ -164,29 +164,34 @@
 
    async function connectBluetooth() {
     try {
-        // البحث عن أي جهاز بلوتوث يدعم نقل البيانات
-        bluetoothDevice = await navigator.bluetooth.requestDevice({
-            acceptAllDevices: true,
-            optionalServices: [0xFFE0] // ده الرقم الشائع للـ HC-05
+        // بنطلب الجهاز ونعرفه إننا محتاجين خدمة نقل البيانات (Serial Port)
+        const device = await navigator.bluetooth.requestDevice({
+            filters: [{ name: 'HC-05' }], // لو اسم القطعة عندك مختلف غيره هنا
+            optionalServices: [0xFFE0, "00001101-0000-1000-8000-00805f9b34fb"] 
         });
 
-        const server = await bluetoothDevice.gatt.connect();
-        // هنحاول نجيب الخدمة المتاحة أياً كان رقمها
-        const services = await server.getPrimaryServices();
-        const service = services[0]; 
+        const server = await device.gatt.connect();
+        
+        // محاولة الوصول للخدمة بأكثر من معرف مشهور
+        let service;
+        try {
+            service = await server.getPrimaryService(0xFFE0);
+        } catch (e) {
+            service = await server.getPrimaryService("00001101-0000-1000-8000-00805f9b34fb");
+        }
+
         const characteristics = await service.getCharacteristics();
         characteristic = characteristics[0];
 
         await characteristic.startNotifications();
-        characteristic.addEventListener('characteristicvaluechanged', (event) => {
-            let decoder = new TextDecoder('utf-8');
-            let data = decoder.decode(event.target.value);
+        characteristic.addEventListener('characteristicvaluechanged', (e) => {
+            let data = new TextDecoder().decode(e.target.value);
             parseData(data);
         });
 
-        alert("Connected! ✅");
+        alert("تم الاتصال بنجاح! ✅");
     } catch (err) {
-        alert("خطأ في الاتصال: " + err.message);
+        alert("فشل الاقتران: " + err.message);
     }
 }
 
