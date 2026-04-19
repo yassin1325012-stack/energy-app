@@ -162,24 +162,20 @@
     let bluetoothDevice;
     let characteristic;
 
-   async function connectBluetooth() {
+  async function connectBluetooth() {
     try {
-        // بنطلب الجهاز ونعرفه إننا محتاجين خدمة نقل البيانات (Serial Port)
+        // بنطلب الجهاز بدون فلاتر عشان ميبقاش فيه حجة للموبايل
         const device = await navigator.bluetooth.requestDevice({
-            filters: [{ name: 'HC-05' }], // لو اسم القطعة عندك مختلف غيره هنا
-            optionalServices: [0xFFE0, "00001101-0000-1000-8000-00805f9b34fb"] 
+            acceptAllDevices: true,
+            optionalServices: ['00001101-0000-1000-8000-00805f9b34fb', 0xFFE0]
         });
 
         const server = await device.gatt.connect();
         
-        // محاولة الوصول للخدمة بأكثر من معرف مشهور
-        let service;
-        try {
-            service = await server.getPrimaryService(0xFFE0);
-        } catch (e) {
-            service = await server.getPrimaryService("00001101-0000-1000-8000-00805f9b34fb");
-        }
-
+        // محاولة إيجاد أي خدمة متاحة
+        const services = await server.getPrimaryServices();
+        const service = services[0]; 
+        
         const characteristics = await service.getCharacteristics();
         characteristic = characteristics[0];
 
@@ -189,9 +185,10 @@
             parseData(data);
         });
 
-        alert("تم الاتصال بنجاح! ✅");
+        alert("تم الاتصال! ✅ جرب تمشي دلوقتي");
     } catch (err) {
-        alert("فشل الاقتران: " + err.message);
+        console.error(err);
+        alert("فشل: " + err.message);
     }
 }
 
