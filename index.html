@@ -158,60 +158,57 @@
         <div class="member"><img src="team4.png" alt="Youssef"><p>Youssef</p></div>
     </div>
 
-    <script>
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js').catch(err => console.log(err));
+   <script>
+    let bluetoothDevice;
+    let characteristic;
+
+    async function connectBluetooth() {
+        // المعرفات الموحدة لقطع البلوتوث HC-05
+        const serviceUuid = 0xFFE0; 
+        const charUuid = 0xFFE1;
+
+        try {
+            // طلب البحث عن جهاز بلوتوث
+            bluetoothDevice = await navigator.bluetooth.requestDevice({
+                filters: [{ services: [serviceUuid] }]
+            });
+
+            const server = await bluetoothDevice.gatt.connect();
+            const service = await server.getPrimaryService(serviceUuid);
+            characteristic = await service.getCharacteristic(charUuid);
+
+            // تفعيل استقبال البيانات
+            await characteristic.startNotifications();
+            characteristic.addEventListener('characteristicvaluechanged', (event) => {
+                let decoder = new TextDecoder('utf-8');
+                let data = decoder.decode(event.target.value);
+                parseData(data); // تشغيل فانكشن تحليل البيانات
+            });
+
+            alert("Connected to Shoe via Bluetooth! ✅");
+        } catch (err) {
+            console.log(err);
+            alert("Bluetooth Error: " + err);
         }
+    }
 
-        let bluetoothDevice;
-        let characteristic;
-
-        async function connectBluetooth() {
-            // المعرفات الافتراضية لقطع البلوتوث HC-05 / HC-06
-            const serviceUuid = 0xFFE0; 
-            const charUuid = 0xFFE1;
-
-            try {
-                bluetoothDevice = await navigator.bluetooth.requestDevice({
-                    filters: [{ services: [serviceUuid] }]
-                });
-
-                const server = await bluetoothDevice.gatt.connect();
-                const service = await server.getPrimaryService(serviceUuid);
-                characteristic = await service.getCharacteristic(charUuid);
-
-                await characteristic.startNotifications();
-                
-                // استقبال البيانات لحظياً
-                characteristic.addEventListener('characteristicvaluechanged', (event) => {
-                    let decoder = new TextDecoder('utf-8');
-                    let data = decoder.decode(event.target.value);
-                    parseData(data);
-                });
-
-                alert("Connected Successfully! ✅");
-            } catch (err) {
-                console.log(err);
-                alert("Bluetooth Error: " + err);
-            }
+    function parseData(data) {
+        let text = data.trim();
+        if (!text.includes("|")) return;
+        let parts = text.split("|");
+        if (parts.length >= 3) {
+            // استخراج القيم وعرضها في الكروت
+            document.getElementById("steps").innerText = parts[0].split(":")[1];
+            document.getElementById("voltage").innerText = parts[1].split(":")[1];
+            document.getElementById("current").innerText = parts[2].split(":")[1];
+            
+            let v = parseFloat(parts[1].split(":")[1]);
+            let c = parseFloat(parts[2].split(":")[1]);
+            let p = (v * (c / 1000)).toFixed(4);
+            document.getElementById("power").innerText = p;
+            document.getElementById("energy").innerText = (p * 300).toFixed(2);
         }
-
-        function parseData(data) {
-            let text = data.trim();
-            if (!text.includes("|")) return;
-            let parts = text.split("|");
-            if (parts.length >= 3) {
-                let v = parseFloat(parts[1].split(":")[1]) || 0;
-                let c = parseFloat(parts[2].split(":")[1]) || 0;
-                let p = (v * (c / 1000)).toFixed(4);
-                
-                document.getElementById("steps").innerText = parts[0].split(":")[1];
-                document.getElementById("voltage").innerText = v;
-                document.getElementById("current").innerText = c;
-                document.getElementById("power").innerText = p;
-                document.getElementById("energy").innerText = (p * 300).toFixed(2);
-            }
-        }
-    </script>
+    }
+</script>
 </body>
 </html>
