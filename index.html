@@ -162,35 +162,33 @@
     let bluetoothDevice;
     let characteristic;
 
-    async function connectBluetooth() {
-        // المعرفات الموحدة لقطع البلوتوث HC-05
-        const serviceUuid = 0xFFE0; 
-        const charUuid = 0xFFE1;
+   async function connectBluetooth() {
+    try {
+        // البحث عن أي جهاز بلوتوث يدعم نقل البيانات
+        bluetoothDevice = await navigator.bluetooth.requestDevice({
+            acceptAllDevices: true,
+            optionalServices: [0xFFE0] // ده الرقم الشائع للـ HC-05
+        });
 
-        try {
-            // طلب البحث عن جهاز بلوتوث
-            bluetoothDevice = await navigator.bluetooth.requestDevice({
-                filters: [{ services: [serviceUuid] }]
-            });
+        const server = await bluetoothDevice.gatt.connect();
+        // هنحاول نجيب الخدمة المتاحة أياً كان رقمها
+        const services = await server.getPrimaryServices();
+        const service = services[0]; 
+        const characteristics = await service.getCharacteristics();
+        characteristic = characteristics[0];
 
-            const server = await bluetoothDevice.gatt.connect();
-            const service = await server.getPrimaryService(serviceUuid);
-            characteristic = await service.getCharacteristic(charUuid);
+        await characteristic.startNotifications();
+        characteristic.addEventListener('characteristicvaluechanged', (event) => {
+            let decoder = new TextDecoder('utf-8');
+            let data = decoder.decode(event.target.value);
+            parseData(data);
+        });
 
-            // تفعيل استقبال البيانات
-            await characteristic.startNotifications();
-            characteristic.addEventListener('characteristicvaluechanged', (event) => {
-                let decoder = new TextDecoder('utf-8');
-                let data = decoder.decode(event.target.value);
-                parseData(data); // تشغيل فانكشن تحليل البيانات
-            });
-
-            alert("Connected to Shoe via Bluetooth! ✅");
-        } catch (err) {
-            console.log(err);
-            alert("Bluetooth Error: " + err);
-        }
+        alert("Connected! ✅");
+    } catch (err) {
+        alert("خطأ في الاتصال: " + err.message);
     }
+}
 
     function parseData(data) {
         let text = data.trim();
