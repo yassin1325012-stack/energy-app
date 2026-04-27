@@ -14,6 +14,9 @@
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: url('bg.png') no-repeat center center fixed; 
+                <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
+                <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+                <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
             background-size: cover;
             color: white;
             margin: 0;
@@ -163,29 +166,25 @@
     let characteristic;
 
  async function connectBluetooth() {
+    // الـ UUID اللي بيفتح قناة السيريال (SPP)
+    const SPP_UUID = '00001101-0000-1000-8000-00805f9b34fb';
+
     try {
-        // طلب البحث عن أي جهاز بلوتوث مقترن أو قريب
+        // طلب الاتصال بجهاز بلوتوث
         const device = await navigator.bluetooth.requestDevice({
-            acceptAllDevices: true,
-            optionalServices: ['00001101-0000-1000-8000-00805f9b34fb'] // ده كود الـ Serial Port Profile
+            filters: [{ services: [SPP_UUID] }], // هنا بنستخدم الـ UUID عشان يفلتر ويجيب الموديول بس
+            optionalServices: [SPP_UUID]
         });
 
-        const server = await device.gatt.connect();
+        console.log("Device selected:", device.name);
         
-        // محاولة سحب الخدمة الأساسية
-        const service = await server.getPrimaryService('00001101-0000-1000-8000-00805f9b34fb');
-        const characteristic = await service.getCharacteristic('00001101-0000-1000-8000-00805f9b34fb');
-
-        await characteristic.startNotifications();
-        characteristic.addEventListener('characteristicvaluechanged', (e) => {
-            let data = new TextDecoder().decode(e.target.value);
-            parseData(data);
-        });
-
-        alert("Connected Successfully! ✅");
-    } catch (err) {
-        console.log(err);
-        alert("تنبيه: " + err.message + "\nتأكد من عمل Pair للجهاز من إعدادات الموبايل أولاً.");
+        // كود فتح القناة (GATT Server)
+        const server = await device.gatt.connect();
+        alert("تم الاتصال بـ " + device.name);
+        
+    } catch (error) {
+        console.log("Error: " + error);
+        alert("حصلت مشكلة في الاتصال: " + error);
     }
 }
 
